@@ -335,6 +335,24 @@ double Cost(const std::vector<uint8_t> & grayValues,
     double HY = 0;
     double HXY = 0;
     double MI = 0;
+
+    if (normalized)
+    {
+        // Marginal entropies must be computed from the 1-D marginals, not inside the
+        // joint (i, j) loop — accumulating px*log(1/px) once per populated joint cell
+        // multiplies HX (and HY) by the average # of populated columns/rows, inflating
+        // the Studholme NMI = (HX + HY) / HXY by ~the same factor.
+        for (int i = 0; i < bins; i++)
+        {
+            double px = prob.grayProbData[i];
+            if (px > 0)
+                HX += px * std::log(1.0 / px);
+            double py = prob.refcProbData[i];
+            if (py > 0)
+                HY += py * std::log(1.0 / py);
+        }
+    }
+
     for (int i = 0; i < bins; i++)
     {
         for (int j = 0; j < bins; j++)
@@ -346,9 +364,7 @@ double Cost(const std::vector<uint8_t> & grayValues,
             {
                 if (normalized)
                 {
-                    HX += px * log(1.0 / px);
-                    HY += py * log(1.0 / py);
-                    HXY += pxy * log(1.0 / pxy);
+                    HXY += pxy * std::log(1.0 / pxy);
                 }
                 else
                 {
